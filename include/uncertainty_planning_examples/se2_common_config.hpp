@@ -81,7 +81,7 @@ namespace se2_common_config
 
     inline simple_robot_models::SE2_ROBOT_CONFIG GetDefaultRobotConfig(const config_common::TASK_CONFIG_PARAMS& options)
     {
-        const double kp = 0.5;//1.0; //0.1;
+        const double kp = 1.0;//1.0; //0.1;
         const double ki = 0.0;
         const double kd = 0.0; //0.01;
         const double i_clamp = 0.0;
