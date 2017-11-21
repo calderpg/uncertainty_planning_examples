@@ -74,7 +74,7 @@ namespace baxter_linked_common_config
 
     inline config_common::TASK_CONFIG_PARAMS GetDefaultExtraOptions()
     {
-        return config_common::TASK_CONFIG_PARAMS(0.03125, 25.0, 0.0, 0.0, "baxter_blocked_test_mod_env");
+        return config_common::TASK_CONFIG_PARAMS(0.03125, 25.0, 0.0, 0.0, 0.0, "baxter_blocked_test_mod_env");
     }
 
     inline config_common::TASK_CONFIG_PARAMS GetExtraOptions()
@@ -90,15 +90,14 @@ namespace baxter_linked_common_config
         const double kd = 0.1;
         const double i_clamp = 0.0;
         const double velocity_limit = env_resolution * 2.0;
-        const double max_sensor_noise = options.sensor_error;
-        const double max_actuator_noise = options.actuator_error;
-        const simple_robot_models::LINKED_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, max_sensor_noise, max_actuator_noise);
+        const double acceleration_limit = velocity_limit * 1.0;
+        const simple_robot_models::LINKED_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, acceleration_limit, options.sensor_error, options.proportional_actuator_error, options.minimum_actuator_error);
         return robot_config;
     }
 
-    inline Eigen::Affine3d GetBaseTransform()
+    inline Eigen::Isometry3d GetBaseTransform()
     {
-        const Eigen::Affine3d base_transform = Eigen::Translation3d(0.0, 0.0, 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()));
+        const Eigen::Isometry3d base_transform = Eigen::Translation3d(0.0, 0.0, 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()));
         return base_transform;
     }
 
@@ -160,7 +159,7 @@ namespace baxter_linked_common_config
 
     inline std::vector<double> GetJointUncertaintyParams(const config_common::TASK_CONFIG_PARAMS& options)
     {
-        const std::vector<double> uncertainty_params(7, options.actuator_error);
+        const std::vector<double> uncertainty_params(7, options.proportional_actuator_error);
         return uncertainty_params;
     }
 
@@ -240,15 +239,9 @@ namespace baxter_linked_common_config
 
     typedef uncertainty_planning_core::LinkedActuatorModel BaxterJointActuatorModel;
 
-    inline simple_robot_models::SimpleLinkedRobot<BaxterJointActuatorModel> GetRobot(const Eigen::Affine3d& base_transform, const simple_robot_models::LINKED_ROBOT_CONFIG& joint_config, const std::vector<double>& joint_uncertainty_params, const std::vector<double>& joint_distance_weights, const std::string& environment_id)
+    inline simple_robot_models::SimpleLinkedRobot<BaxterJointActuatorModel> GetRobot(const Eigen::Isometry3d& base_transform, const simple_robot_models::LINKED_ROBOT_CONFIG& joint_config, const std::vector<double>& joint_uncertainty_params, const std::vector<double>& joint_distance_weights, const std::string& environment_id)
     {
-        const double s0_noise = joint_uncertainty_params[0];
-        const double s1_noise = joint_uncertainty_params[1];
-        const double e0_noise = joint_uncertainty_params[2];
-        const double e1_noise = joint_uncertainty_params[3];
-        const double w0_noise = joint_uncertainty_params[4];
-        const double w1_noise = joint_uncertainty_params[5];
-        const double w2_noise = joint_uncertainty_params[6];
+        UNUSED(joint_uncertainty_params);
         // Make the reference configuration
         const SLC reference_configuration = GetReferenceConfiguration();
         // Make the robot model
@@ -375,7 +368,7 @@ namespace baxter_linked_common_config
         right_s0.joint_axis = Eigen::Vector3d::UnitZ();
         right_s0.joint_transform = Eigen::Translation3d(0.055695, 0.0, 0.011038) * EigenHelpers::QuaternionFromUrdfRPY(0.0, 0.0, 0.0);
         right_s0.joint_model = reference_configuration[0];
-        const BaxterJointActuatorModel right_s0_joint_model(std::abs(s0_noise), 0.5);
+        const BaxterJointActuatorModel right_s0_joint_model(0.5, 0.5, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG s0_config = joint_config;
         s0_config.velocity_limit = 0.27 * 0.75;
         right_s0.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(s0_config, right_s0_joint_model);
@@ -387,7 +380,7 @@ namespace baxter_linked_common_config
         right_s1.joint_axis = Eigen::Vector3d::UnitZ();
         right_s1.joint_transform = Eigen::Translation3d(0.069, 0.0, 0.27035) * EigenHelpers::QuaternionFromUrdfRPY(-1.57079632679, 0.0, 0.0);
         right_s1.joint_model = reference_configuration[1];
-        const BaxterJointActuatorModel right_s1_joint_model(std::abs(s1_noise), 0.5);
+        const BaxterJointActuatorModel right_s1_joint_model(0.5, 0.5, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG s1_config = joint_config;
         s1_config.velocity_limit = 0.27 * 0.75;
         right_s1.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(s1_config, right_s1_joint_model);
@@ -399,7 +392,7 @@ namespace baxter_linked_common_config
         right_e0.joint_axis = Eigen::Vector3d::UnitZ();
         right_e0.joint_transform = Eigen::Translation3d(0.102, 0.0, 0.0) * EigenHelpers::QuaternionFromUrdfRPY(1.57079632679, 0.0, 1.57079632679);
         right_e0.joint_model = reference_configuration[2];
-        const BaxterJointActuatorModel right_e0_joint_model(std::abs(e0_noise), 0.5);
+        const BaxterJointActuatorModel right_e0_joint_model(0.5, 0.5, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG e0_config = joint_config;
         e0_config.velocity_limit = 0.27 * 0.75;
         right_e0.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(e0_config, right_e0_joint_model);
@@ -411,7 +404,7 @@ namespace baxter_linked_common_config
         right_e1.joint_axis = Eigen::Vector3d::UnitZ();
         right_e1.joint_transform = Eigen::Translation3d(0.069, 0.0, 0.26242) * EigenHelpers::QuaternionFromUrdfRPY(-1.57079632679, -1.57079632679, 0.0);
         right_e1.joint_model = reference_configuration[3];
-        const BaxterJointActuatorModel right_e1_joint_model(std::abs(e1_noise), 0.5);
+        const BaxterJointActuatorModel right_e1_joint_model(0.5, 0.5, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG e1_config = joint_config;
         e1_config.velocity_limit = 0.27 * 0.75;
         right_e1.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(e1_config, right_e1_joint_model);
@@ -423,7 +416,7 @@ namespace baxter_linked_common_config
         right_w0.joint_axis = Eigen::Vector3d::UnitZ();
         right_w0.joint_transform = Eigen::Translation3d(0.10359, 0.0, 0.0) * EigenHelpers::QuaternionFromUrdfRPY(1.57079632679, 0.0, 1.57079632679);
         right_w0.joint_model = reference_configuration[4];
-        const BaxterJointActuatorModel right_w0_joint_model(std::abs(w0_noise), 1.0);
+        const BaxterJointActuatorModel right_w0_joint_model(1.0, 1.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG w0_config = joint_config;
         w0_config.velocity_limit = 0.3 * 0.75;
         right_w0.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(w0_config, right_w0_joint_model);
@@ -435,7 +428,7 @@ namespace baxter_linked_common_config
         right_w1.joint_axis = Eigen::Vector3d::UnitZ();
         right_w1.joint_transform = Eigen::Translation3d(0.01, 0.0, 0.2707) * EigenHelpers::QuaternionFromUrdfRPY(-1.57079632679, -1.57079632679, 0.0);
         right_w1.joint_model = reference_configuration[5];
-        const BaxterJointActuatorModel right_w1_joint_model(std::abs(w1_noise), 1.0);
+        const BaxterJointActuatorModel right_w1_joint_model(1.0, 1.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG w1_config = joint_config;
         w1_config.velocity_limit = 0.3 * 0.75;
         right_w1.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(w1_config, right_w1_joint_model);
@@ -447,7 +440,7 @@ namespace baxter_linked_common_config
         right_w2.joint_axis = Eigen::Vector3d::UnitZ();
         right_w2.joint_transform = Eigen::Translation3d(0.115975, 0.0, 0.0) * EigenHelpers::QuaternionFromUrdfRPY(1.57079632679, 0.0, 1.57079632679);
         right_w2.joint_model = reference_configuration[6];
-        const BaxterJointActuatorModel right_w2_joint_model(std::abs(w2_noise), 1.0);
+        const BaxterJointActuatorModel right_w2_joint_model(1.0, 1.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG w2_config = joint_config;
         w2_config.velocity_limit = 0.5 * 0.75;
         right_w2.joint_controller = simple_robot_models::JointControllerGroup<BaxterJointActuatorModel>(w2_config, right_w2_joint_model);

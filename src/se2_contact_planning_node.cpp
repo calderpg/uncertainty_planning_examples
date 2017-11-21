@@ -33,7 +33,7 @@ void plan(ros::Publisher& display_debug_publisher)
     const std::pair<uncertainty_planning_core::SE2Config, uncertainty_planning_core::SE2Config> start_and_goal = se2_common_config::GetStartAndGoal();
     const uncertainty_planning_core::SE2SamplerPtr sampler = se2_common_config::GetSampler();
     const simple_robot_models::SE2_ROBOT_CONFIG robot_config = se2_common_config::GetDefaultRobotConfig(extra_options);
-    const uncertainty_planning_core::SE2Robot robot = se2_common_config::GetRobot(robot_config);
+    const uncertainty_planning_core::SE2Robot robot = se2_common_config::GetRobot(robot_config, 1.0, 1.0);
     const uncertainty_planning_core::SE2SimulatorPtr simulator = se2_common_config::GetSimulator(extra_options, options.debug_level);
     auto planner_result = uncertainty_planning_core::PlanSE2Uncertainty(options, robot, simulator, sampler, start_and_goal.first, start_and_goal.second, display_debug_publisher);
     const auto& policy = planner_result.first;

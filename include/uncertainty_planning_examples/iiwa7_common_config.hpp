@@ -74,7 +74,7 @@ namespace iiwa7_linked_common_config
 
     inline config_common::TASK_CONFIG_PARAMS GetDefaultExtraOptions()
     {
-        return config_common::TASK_CONFIG_PARAMS(0.03125, 25.0, 0.0, 0.0, "baxter_blocked_test_mod_env");
+        return config_common::TASK_CONFIG_PARAMS(0.03125, 25.0, 0.0, 0.0, 0.0, "baxter_blocked_test_mod_env");
     }
 
     inline config_common::TASK_CONFIG_PARAMS GetExtraOptions()
@@ -90,15 +90,14 @@ namespace iiwa7_linked_common_config
         const double kd = 0.1;
         const double i_clamp = 0.0;
         const double velocity_limit = env_resolution * 2.0;
-        const double max_sensor_noise = options.sensor_error;
-        const double max_actuator_noise = options.actuator_error;
-        const simple_robot_models::LINKED_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, max_sensor_noise, max_actuator_noise);
+        const double acceleration_limit = velocity_limit * 10.0;
+        const simple_robot_models::LINKED_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, acceleration_limit, options.sensor_error, options.proportional_actuator_error, options.minimum_actuator_error);
         return robot_config;
     }
 
-    inline Eigen::Affine3d GetBaseTransform()
+    inline Eigen::Isometry3d GetBaseTransform()
     {
-        const Eigen::Affine3d base_transform = Eigen::Translation3d(0.0, 0.0, 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()));
+        const Eigen::Isometry3d base_transform = Eigen::Translation3d(0.0, 0.0, 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()));
         return base_transform;
     }
 
@@ -139,7 +138,7 @@ namespace iiwa7_linked_common_config
 
     inline std::vector<double> GetJointUncertaintyParams(const config_common::TASK_CONFIG_PARAMS& options)
     {
-        const std::vector<double> uncertainty_params(7, options.actuator_error);
+        const std::vector<double> uncertainty_params(7, options.proportional_actuator_error);
         return uncertainty_params;
     }
 
@@ -225,8 +224,9 @@ namespace iiwa7_linked_common_config
 
     typedef uncertainty_planning_core::LinkedActuatorModel IIWA7JointActuatorModel;
 
-    inline simple_robot_models::SimpleLinkedRobot<IIWA7JointActuatorModel> GetRobot(const Eigen::Affine3d& base_transform, const simple_robot_models::LINKED_ROBOT_CONFIG& joint_config, const std::vector<double>& joint_uncertainty_params, const std::vector<double>& joint_distance_weights, const std::string& environment_id)
+    inline simple_robot_models::SimpleLinkedRobot<IIWA7JointActuatorModel> GetRobot(const Eigen::Isometry3d& base_transform, const simple_robot_models::LINKED_ROBOT_CONFIG& joint_config, const std::vector<double>& joint_uncertainty_params, const std::vector<double>& joint_distance_weights, const std::string& environment_id)
     {
+        UNUSED(joint_uncertainty_params);
         UNUSED(environment_id);
         // Make the robot model
         // Make the link models
@@ -320,13 +320,6 @@ namespace iiwa7_linked_common_config
         const double joint_5_velocity = joint_max_velocities[4];
         const double joint_6_velocity = joint_max_velocities[5];
         const double joint_7_velocity = joint_max_velocities[6];
-        const double joint_1_noise = joint_uncertainty_params[0];
-        const double joint_2_noise = joint_uncertainty_params[1];
-        const double joint_3_noise = joint_uncertainty_params[2];
-        const double joint_4_noise = joint_uncertainty_params[3];
-        const double joint_5_noise = joint_uncertainty_params[4];
-        const double joint_6_noise = joint_uncertainty_params[5];
-        const double joint_7_noise = joint_uncertainty_params[6];
         // Make the reference configuration
         const SLC reference_configuration = GetReferenceConfiguration();
         // Joint 1
@@ -337,7 +330,7 @@ namespace iiwa7_linked_common_config
         joint_1.joint_axis = Eigen::Vector3d::UnitZ();
         joint_1.joint_transform = Eigen::Translation3d(0.0, 0.0, 0.15) * EigenHelpers::QuaternionFromUrdfRPY(0.0, 0.0, 0.0);
         joint_1.joint_model = reference_configuration[0];
-        const IIWA7JointActuatorModel iiwa_joint_1_model(std::abs(joint_1_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_1_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_1_config = joint_config;
         iiwa_joint_1_config.velocity_limit = joint_1_velocity;
         joint_1.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_1_config, iiwa_joint_1_model);
@@ -349,7 +342,7 @@ namespace iiwa7_linked_common_config
         joint_2.joint_axis = Eigen::Vector3d::UnitZ();
         joint_2.joint_transform = Eigen::Translation3d(0.0, 0.0, 0.19) * EigenHelpers::QuaternionFromUrdfRPY(M_PI_2, 0.0, M_PI);
         joint_2.joint_model = reference_configuration[1];
-        const IIWA7JointActuatorModel iiwa_joint_2_model(std::abs(joint_2_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_2_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_2_config = joint_config;
         iiwa_joint_2_config.velocity_limit = joint_2_velocity;
         joint_2.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_2_config, iiwa_joint_2_model);
@@ -361,7 +354,7 @@ namespace iiwa7_linked_common_config
         joint_3.joint_axis = Eigen::Vector3d::UnitZ();
         joint_3.joint_transform = Eigen::Translation3d(0.0, 0.21, 0.0) * EigenHelpers::QuaternionFromUrdfRPY(M_PI_2, 0.0, M_PI);
         joint_3.joint_model = reference_configuration[2];
-        const IIWA7JointActuatorModel iiwa_joint_3_model(std::abs(joint_3_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_3_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_3_config = joint_config;
         iiwa_joint_3_config.velocity_limit = joint_3_velocity;
         joint_3.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_3_config, iiwa_joint_3_model);
@@ -373,7 +366,7 @@ namespace iiwa7_linked_common_config
         joint_4.joint_axis = Eigen::Vector3d::UnitZ();
         joint_4.joint_transform = Eigen::Translation3d(0.0, 0.0, 0.19) * EigenHelpers::QuaternionFromUrdfRPY(M_PI_2, 0.0, 0.0);
         joint_4.joint_model = reference_configuration[3];
-        const IIWA7JointActuatorModel iiwa_joint_4_model(std::abs(joint_4_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_4_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_4_config = joint_config;
         iiwa_joint_4_config.velocity_limit = joint_4_velocity;
         joint_4.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_4_config, iiwa_joint_4_model);
@@ -385,7 +378,7 @@ namespace iiwa7_linked_common_config
         joint_5.joint_axis = Eigen::Vector3d::UnitZ();
         joint_5.joint_transform = Eigen::Translation3d(0.0, 0.21, 0.0) * EigenHelpers::QuaternionFromUrdfRPY(-M_PI_2, M_PI, 0.0);
         joint_5.joint_model = reference_configuration[4];
-        const IIWA7JointActuatorModel iiwa_joint_5_model(std::abs(joint_5_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_5_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_5_config = joint_config;
         iiwa_joint_5_config.velocity_limit = joint_5_velocity;
         joint_5.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_5_config, iiwa_joint_5_model);
@@ -397,7 +390,7 @@ namespace iiwa7_linked_common_config
         joint_6.joint_axis = Eigen::Vector3d::UnitZ();
         joint_6.joint_transform = Eigen::Translation3d(0.0, 0.06070, 0.19) * EigenHelpers::QuaternionFromUrdfRPY(M_PI_2, 0.0, 0.0);
         joint_6.joint_model = reference_configuration[5];
-        const IIWA7JointActuatorModel iiwa_joint_6_model(std::abs(joint_6_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_6_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_6_config = joint_config;
         iiwa_joint_6_config.velocity_limit = joint_6_velocity;
         joint_6.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_6_config, iiwa_joint_6_model);
@@ -409,7 +402,7 @@ namespace iiwa7_linked_common_config
         joint_7.joint_axis = Eigen::Vector3d::UnitZ();
         joint_7.joint_transform = Eigen::Translation3d(0.0, 0.081, 0.06070) * EigenHelpers::QuaternionFromUrdfRPY(-M_PI_2, M_PI, 0.0);
         joint_7.joint_model = reference_configuration[6];
-        const IIWA7JointActuatorModel iiwa_joint_7_model(std::abs(joint_7_noise), 0.5);
+        const IIWA7JointActuatorModel iiwa_joint_7_model(0.5, 5.0, joint_config.max_actuator_proportional_noise, joint_config.max_actuator_minimum_noise, 0.5);
         simple_robot_models::LINKED_ROBOT_CONFIG iiwa_joint_7_config = joint_config;
         iiwa_joint_7_config.velocity_limit = joint_7_velocity;
         joint_7.joint_controller = simple_robot_models::JointControllerGroup<IIWA7JointActuatorModel>(iiwa_joint_7_config, iiwa_joint_7_model);

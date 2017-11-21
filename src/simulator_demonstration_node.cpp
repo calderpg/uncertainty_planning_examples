@@ -32,7 +32,7 @@ void demonstrate_se3(ros::Publisher& display_debug_publisher)
     const std::pair<uncertainty_planning_core::SE3Config, uncertainty_planning_core::SE3Config> start_and_goal = se3_common_config::GetStartAndGoal();
     const uncertainty_planning_core::SE3SamplerPtr sampler = se3_common_config::GetSampler();
     const simple_robot_models::SE3_ROBOT_CONFIG robot_config = se3_common_config::GetDefaultRobotConfig(extra_options);
-    const uncertainty_planning_core::SE3Robot robot = se3_common_config::GetRobot(robot_config);
+    const uncertainty_planning_core::SE3Robot robot = se3_common_config::GetRobot(robot_config, 1.0, 1.0);
     const uncertainty_planning_core::SE3SimulatorPtr simulator = se3_common_config::GetSimulator(extra_options, options.debug_level);
     uncertainty_planning_core::DemonstrateSE3Simulator(options, robot, simulator, sampler, start_and_goal.first, start_and_goal.second, display_debug_publisher);
 }
@@ -46,7 +46,7 @@ void demonstrate_se2(ros::Publisher& display_debug_publisher)
     const std::pair<uncertainty_planning_core::SE2Config, uncertainty_planning_core::SE2Config> start_and_goal = se2_common_config::GetStartAndGoal();
     const uncertainty_planning_core::SE2SamplerPtr sampler = se2_common_config::GetSampler();
     const simple_robot_models::SE2_ROBOT_CONFIG robot_config = se2_common_config::GetDefaultRobotConfig(extra_options);
-    const uncertainty_planning_core::SE2Robot robot = se2_common_config::GetRobot(robot_config);
+    const uncertainty_planning_core::SE2Robot robot = se2_common_config::GetRobot(robot_config, 1.0, 1.0);
     const uncertainty_planning_core::SE2SimulatorPtr simulator = se2_common_config::GetSimulator(extra_options, options.debug_level);
     uncertainty_planning_core::DemonstrateSE2Simulator(options, robot, simulator, sampler, start_and_goal.first, start_and_goal.second, display_debug_publisher);
 }
@@ -64,7 +64,7 @@ void demonstrate_baxter(ros::Publisher& display_debug_publisher)
     const std::pair<uncertainty_planning_core::LinkedConfig, uncertainty_planning_core::LinkedConfig> start_and_goal = baxter_linked_common_config::GetStartAndGoal();
     const uncertainty_planning_core::LinkedSamplerPtr sampler = baxter_linked_common_config::GetSampler();
     const simple_robot_models::LINKED_ROBOT_CONFIG robot_config = baxter_linked_common_config::GetDefaultRobotConfig(extra_options);
-    const Eigen::Affine3d base_transform = baxter_linked_common_config::GetBaseTransform();
+    const Eigen::Isometry3d base_transform = baxter_linked_common_config::GetBaseTransform();
     const uncertainty_planning_core::LinkedRobot robot = baxter_linked_common_config::GetRobot(base_transform, robot_config, joint_uncertainty_params, joint_distance_weights, extra_options.environment_id);
     const uncertainty_planning_core::LinkedSimulatorPtr simulator = baxter_linked_common_config::GetSimulator(extra_options, options.debug_level);
     uncertainty_planning_core::DemonstrateLinkedSimulator(options, robot, simulator, sampler, start_and_goal.first, start_and_goal.second, display_debug_publisher);
@@ -83,7 +83,7 @@ void demonstrate_ur5(ros::Publisher& display_debug_publisher)
     const std::pair<uncertainty_planning_core::LinkedConfig, uncertainty_planning_core::LinkedConfig> start_and_goal = ur5_linked_common_config::GetStartAndGoal();
     const uncertainty_planning_core::LinkedSamplerPtr sampler = ur5_linked_common_config::GetSampler();
     const simple_robot_models::LINKED_ROBOT_CONFIG robot_config = ur5_linked_common_config::GetDefaultRobotConfig(extra_options);
-    const Eigen::Affine3d base_transform = ur5_linked_common_config::GetBaseTransform();
+    const Eigen::Isometry3d base_transform = ur5_linked_common_config::GetBaseTransform();
     const uncertainty_planning_core::LinkedRobot robot = ur5_linked_common_config::GetRobot(base_transform, robot_config, joint_uncertainty_params, joint_distance_weights);
     const uncertainty_planning_core::LinkedSimulatorPtr simulator = ur5_linked_common_config::GetSimulator(extra_options, options.debug_level);
     uncertainty_planning_core::DemonstrateLinkedSimulator(options, robot, simulator, sampler, start_and_goal.first, start_and_goal.second, display_debug_publisher);
@@ -102,7 +102,7 @@ void demonstrate_iiwa7(ros::Publisher& display_debug_publisher)
     const std::pair<uncertainty_planning_core::LinkedConfig, uncertainty_planning_core::LinkedConfig> start_and_goal = iiwa7_linked_common_config::GetStartAndGoal();
     const uncertainty_planning_core::LinkedSamplerPtr sampler = iiwa7_linked_common_config::GetSampler();
     const simple_robot_models::LINKED_ROBOT_CONFIG robot_config = iiwa7_linked_common_config::GetDefaultRobotConfig(extra_options);
-    const Eigen::Affine3d base_transform = iiwa7_linked_common_config::GetBaseTransform();
+    const Eigen::Isometry3d base_transform = iiwa7_linked_common_config::GetBaseTransform();
     const uncertainty_planning_core::LinkedRobot robot = iiwa7_linked_common_config::GetRobot(base_transform, robot_config, joint_uncertainty_params, joint_distance_weights, extra_options.environment_id);
     const uncertainty_planning_core::LinkedSimulatorPtr simulator = iiwa7_linked_common_config::GetSimulator(extra_options, options.debug_level);
     uncertainty_planning_core::DemonstrateLinkedSimulator(options, robot, simulator, sampler, start_and_goal.first, start_and_goal.second, display_debug_publisher);

@@ -66,7 +66,7 @@ namespace se2_common_config
 
     inline config_common::TASK_CONFIG_PARAMS GetDefaultExtraOptions()
     {
-        return config_common::TASK_CONFIG_PARAMS(0.125, 10.0, 0.0, 0.125, "se2_maze");
+        return config_common::TASK_CONFIG_PARAMS(0.125, 10.0, 0.0, 0.125, 0.0, "se2_maze");
     }
 
     inline config_common::TASK_CONFIG_PARAMS GetExtraOptions()
@@ -86,12 +86,16 @@ namespace se2_common_config
         const double kd = 0.0; //0.01;
         const double i_clamp = 0.0;
         const double velocity_limit = 1.0;
-        const double angular_velocity_limit = velocity_limit * 0.125;
+        const double acceleration_limit = 10.0;
+        const double angular_velocity_limit = velocity_limit * 0.25; //0.125;
+        const double angular_acceleration_limit = acceleration_limit * 0.25;
         const double max_sensor_noise = options.sensor_error;
-        const double max_angular_sensor_noise = max_sensor_noise * 0.125;
-        const double max_actuator_noise = options.actuator_error;
-        const double max_angular_actuator_noise = max_actuator_noise * 0.125;
-        const simple_robot_models::SE2_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, max_sensor_noise, max_actuator_noise, kp, ki, kd, i_clamp, angular_velocity_limit, max_angular_sensor_noise, max_angular_actuator_noise);
+        const double max_angular_sensor_noise = max_sensor_noise * 0.25; //0.125;
+        const double max_proportional_actuator_noise = options.proportional_actuator_error;
+        const double max_minimum_actuator_noise = options.minimum_actuator_error;
+        const double max_angular_proportional_actuator_noise = max_proportional_actuator_noise * 0.25;// 0.125;
+        const double max_angular_minimum_actuator_noise = max_minimum_actuator_noise * 0.25;//0.125;
+        const simple_robot_models::SE2_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, acceleration_limit, max_sensor_noise, max_proportional_actuator_noise, max_minimum_actuator_noise, kp, ki, kd, i_clamp, angular_velocity_limit, angular_acceleration_limit, max_angular_sensor_noise, max_angular_proportional_actuator_noise, max_angular_minimum_actuator_noise);
         return robot_config;
     }
 
@@ -113,18 +117,27 @@ namespace se2_common_config
     inline std::shared_ptr<EigenHelpers::VectorVector4d> GetRobotPoints()
     {
         std::shared_ptr<EigenHelpers::VectorVector4d> robot_points(new EigenHelpers::VectorVector4d());
-        const std::vector<double> x_pos = {-0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375, 0.5625, 0.6875, 0.8125, 0.9375, 1.0625, 1.1875, 1.3125, 1.4375};
-        const std::vector<double> y_pos = {-0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375, 0.5625, 0.6875, 0.8125, 0.9375, 1.0625, 1.1875, 1.3125, 1.4375};
+//        const std::vector<double> x_pos = {-0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375, 0.5625, 0.6875, 0.8125, 0.9375, 1.0625, 1.1875, 1.3125, 1.4375};
+//        const std::vector<double> y_pos = {-0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375, 0.5625, 0.6875, 0.8125, 0.9375, 1.0625, 1.1875, 1.3125, 1.4375};
+        // Cenetered L block
+//        const std::vector<double> x_pos = {-0.4375, -0.3125, -0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375};
+//        const std::vector<double> y_pos = {-0.4375, -0.3125, -0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375};
+        // Stretched to limit free space
+        const std::vector<double> x_pos = {-0.48, -0.3125, -0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.48};
+        const std::vector<double> y_pos = {-0.48, -0.3125, -0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.48};
         const std::vector<double> z_pos = {-0.4375, -0.3125, -0.1875, -0.0625, 0.0625, 0.1875, 0.3125, 0.4375};
         for (size_t xpdx = 0; xpdx < x_pos.size(); xpdx++)
         {
             for (size_t ypdx = 0; ypdx < y_pos.size(); ypdx++)
             {
-                if (xpdx <= 3 || ypdx <= 3)
+                const double x = x_pos[xpdx];
+                const double y = y_pos[ypdx];
+                if (x >= 0.0 || y>= 0.0)
                 {
                     for (size_t zpdx = 0; zpdx < z_pos.size(); zpdx++)
                     {
-                        robot_points->push_back(Eigen::Vector4d(x_pos[xpdx], y_pos[ypdx], z_pos[zpdx], 1.0));
+                        const double z = z_pos[zpdx];
+                        robot_points->push_back(Eigen::Vector4d(x, y, z, 1.0));
                     }
                 }
             }
@@ -132,11 +145,11 @@ namespace se2_common_config
         return robot_points;
     }
 
-    inline simple_robot_models::SimpleSE2Robot GetRobot(const simple_robot_models::SE2_ROBOT_CONFIG& robot_config)
+    inline simple_robot_models::SimpleSE2Robot GetRobot(const simple_robot_models::SE2_ROBOT_CONFIG& robot_config, const double position_distance_weight, const double rotation_distance_weight)
     {
         // Make the actual robot
         const Eigen::Matrix<double, 3, 1> initial_config = Eigen::Matrix<double, 3, 1>::Zero();
-        const simple_robot_models::SimpleSE2Robot robot(GetRobotPoints(), initial_config, robot_config);
+        const simple_robot_models::SimpleSE2Robot robot(GetRobotPoints(), initial_config, robot_config, position_distance_weight, rotation_distance_weight);
         return robot;
     }
 

@@ -84,7 +84,7 @@ namespace ur5_linked_common_config
 
     inline config_common::TASK_CONFIG_PARAMS GetDefaultExtraOptions()
     {
-        return config_common::TASK_CONFIG_PARAMS(0.03125, 25.0, 0.0, 0.0, "baxter_blocked_test_mod_env");
+        return config_common::TASK_CONFIG_PARAMS(0.03125, 25.0, 0.0, 0.0, 0.0, "baxter_blocked_test_mod_env");
     }
 
     inline config_common::TASK_CONFIG_PARAMS GetExtraOptions()
@@ -100,15 +100,14 @@ namespace ur5_linked_common_config
         const double kd = 0.1;
         const double i_clamp = 0.0;
         const double velocity_limit = env_resolution * 2.0;
-        const double max_sensor_noise = options.sensor_error;
-        const double max_actuator_noise = options.actuator_error;
-        const simple_robot_models::LINKED_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, max_sensor_noise, max_actuator_noise);
+        const double acceleration_limit = velocity_limit * 5.0;
+        const simple_robot_models::LINKED_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, acceleration_limit, options.sensor_error, options.proportional_actuator_error, options.minimum_actuator_error);
         return robot_config;
     }
 
-    inline Eigen::Affine3d GetBaseTransform()
+    inline Eigen::Isometry3d GetBaseTransform()
     {
-        const Eigen::Affine3d base_transform = Eigen::Translation3d(0.0, 0.0, 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()));
+        const Eigen::Isometry3d base_transform = Eigen::Translation3d(0.0, 0.0, 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(0.0, Eigen::Vector3d::UnitZ()));
         return base_transform;
     }
 
@@ -147,7 +146,7 @@ namespace ur5_linked_common_config
 
     inline std::vector<double> GetJointUncertaintyParams(const config_common::TASK_CONFIG_PARAMS& options)
     {
-        std::vector<double> uncertainty_params(6, options.actuator_error);
+        std::vector<double> uncertainty_params(6, options.proportional_actuator_error);
         return uncertainty_params;
     }
 
@@ -234,14 +233,9 @@ namespace ur5_linked_common_config
 
     typedef uncertainty_planning_core::LinkedActuatorModel UR5JointActuatorModel;
 
-    inline simple_robot_models::SimpleLinkedRobot<UR5JointActuatorModel> GetRobot(const Eigen::Affine3d& base_transform, const simple_robot_models::LINKED_ROBOT_CONFIG& joint_config, const std::vector<double>& joint_uncertainty_params, const std::vector<double>& joint_distance_weights)
+    inline simple_robot_models::SimpleLinkedRobot<UR5JointActuatorModel> GetRobot(const Eigen::Isometry3d& base_transform, const simple_robot_models::LINKED_ROBOT_CONFIG& joint_config, const std::vector<double>& joint_uncertainty_params, const std::vector<double>& joint_distance_weights)
     {
-        const double shoulder_pan_joint_noise = joint_uncertainty_params[0];
-        const double shoulder_lift_joint_noise = joint_uncertainty_params[1];
-        const double elbow_joint_noise = joint_uncertainty_params[2];
-        const double wrist_1_joint_noise = joint_uncertainty_params[3];
-        const double wrist_2_joint_noise = joint_uncertainty_params[4];
-        const double wrist_3_joint_noise = joint_uncertainty_params[5];
+        UNUSED(joint_uncertainty_params);
         // Make the robot model
         simple_robot_models::RobotLink base_link(GetLinkPoints("base_link"), "base_link");
         simple_robot_models::RobotLink shoulder_link(GetLinkPoints("shoulder_link"), "shoulder_link");
@@ -268,7 +262,7 @@ namespace ur5_linked_common_config
         shoulder_pan_joint.joint_model = reference_configuration[0];
         simple_robot_models::LINKED_ROBOT_CONFIG shoulder_pan_joint_config = joint_config;
         shoulder_pan_joint_config.velocity_limit = 3.15;
-        const UR5JointActuatorModel shoulder_pan_joint_model(std::abs(shoulder_pan_joint_noise), shoulder_pan_joint_config.velocity_limit);
+        const UR5JointActuatorModel shoulder_pan_joint_model = shoulder_pan_joint_config.MakeTNUVActuatorModel();
         shoulder_pan_joint.joint_controller = simple_robot_models::JointControllerGroup<UR5JointActuatorModel>(shoulder_pan_joint_config, shoulder_pan_joint_model);
         // Shoulder lift
         simple_robot_models::RobotJoint<UR5JointActuatorModel> shoulder_lift_joint;
@@ -280,7 +274,7 @@ namespace ur5_linked_common_config
         shoulder_lift_joint.joint_model = reference_configuration[1];
         simple_robot_models::LINKED_ROBOT_CONFIG shoulder_lift_joint_config = joint_config;
         shoulder_lift_joint_config.velocity_limit = 3.15;
-        const UR5JointActuatorModel shoulder_lift_joint_model(std::abs(shoulder_lift_joint_noise), shoulder_lift_joint_config.velocity_limit);
+        const UR5JointActuatorModel shoulder_lift_joint_model = shoulder_lift_joint_config.MakeTNUVActuatorModel();
         shoulder_lift_joint.joint_controller = simple_robot_models::JointControllerGroup<UR5JointActuatorModel>(shoulder_lift_joint_config, shoulder_lift_joint_model);
         // Elbow
         simple_robot_models::RobotJoint<UR5JointActuatorModel> elbow_joint;
@@ -292,7 +286,7 @@ namespace ur5_linked_common_config
         elbow_joint.joint_model = reference_configuration[2];
         simple_robot_models::LINKED_ROBOT_CONFIG elbow_joint_config = joint_config;
         elbow_joint_config.velocity_limit = 3.15;
-        const UR5JointActuatorModel elbow_joint_model(std::abs(elbow_joint_noise), elbow_joint_config.velocity_limit);
+        const UR5JointActuatorModel elbow_joint_model = elbow_joint_config.MakeTNUVActuatorModel();
         elbow_joint.joint_controller = simple_robot_models::JointControllerGroup<UR5JointActuatorModel>(elbow_joint_config, elbow_joint_model);
         // Wrist 1
         simple_robot_models::RobotJoint<UR5JointActuatorModel> wrist_1_joint;
@@ -304,7 +298,7 @@ namespace ur5_linked_common_config
         wrist_1_joint.joint_model = reference_configuration[3];
         simple_robot_models::LINKED_ROBOT_CONFIG wrist_1_joint_config = joint_config;
         wrist_1_joint_config.velocity_limit = 3.2;
-        const UR5JointActuatorModel wrist_1_joint_model(std::abs(wrist_1_joint_noise), wrist_1_joint_config.velocity_limit);
+        const UR5JointActuatorModel wrist_1_joint_model = wrist_1_joint_config.MakeTNUVActuatorModel();
         wrist_1_joint.joint_controller = simple_robot_models::JointControllerGroup<UR5JointActuatorModel>(wrist_1_joint_config, wrist_1_joint_model);
         // Wrist 2
         simple_robot_models::RobotJoint<UR5JointActuatorModel> wrist_2_joint;
@@ -316,7 +310,7 @@ namespace ur5_linked_common_config
         wrist_2_joint.joint_model = reference_configuration[4];
         simple_robot_models::LINKED_ROBOT_CONFIG wrist_2_joint_config = joint_config;
         wrist_2_joint_config.velocity_limit = 3.2;
-        const UR5JointActuatorModel wrist_2_joint_model(std::abs(wrist_2_joint_noise), wrist_2_joint_config.velocity_limit);
+        const UR5JointActuatorModel wrist_2_joint_model = wrist_2_joint_config.MakeTNUVActuatorModel();
         wrist_2_joint.joint_controller = simple_robot_models::JointControllerGroup<UR5JointActuatorModel>(wrist_2_joint_config, wrist_2_joint_model);
         // Wrist 3
         simple_robot_models::RobotJoint<UR5JointActuatorModel> wrist_3_joint;
@@ -328,7 +322,7 @@ namespace ur5_linked_common_config
         wrist_3_joint.joint_model = reference_configuration[5];
         simple_robot_models::LINKED_ROBOT_CONFIG wrist_3_joint_config = joint_config;
         wrist_3_joint_config.velocity_limit = 3.2;
-        const UR5JointActuatorModel wrist_3_joint_model(std::abs(wrist_3_joint_noise), wrist_3_joint_config.velocity_limit);
+        const UR5JointActuatorModel wrist_3_joint_model = wrist_3_joint_config.MakeTNUVActuatorModel();
         wrist_3_joint.joint_controller = simple_robot_models::JointControllerGroup<UR5JointActuatorModel>(wrist_3_joint_config, wrist_3_joint_model);
         // Fixed wrist->EE joint
         simple_robot_models::RobotJoint<UR5JointActuatorModel> ee_fixed_joint;

@@ -31,8 +31,8 @@ using namespace uncertainty_contact_planning;
 inline std::vector<Eigen::Matrix<double, 3, 1>, std::allocator<Eigen::Matrix<double, 3, 1>>> move_robot(const Eigen::Matrix<double, 3, 1>& target_config, const Eigen::Matrix<double, 3, 1>& expected_result_config, const double duration, const double execution_shortcut_distance, const bool reset, ros::ServiceClient& robot_control_service)
 {
     UNUSED(expected_result_config);
-    const Eigen::Affine3d target_transform = Eigen::Translation3d(target_config(0), target_config(1), 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(target_config(2), Eigen::Vector3d::UnitZ()));
-    const geometry_msgs::PoseStamped target_pose = EigenHelpersConversions::EigenAffine3dToGeometryPoseStamped(target_transform, "world");
+    const Eigen::Isometry3d target_transform = Eigen::Translation3d(target_config(0), target_config(1), 0.0) * Eigen::Quaterniond(Eigen::AngleAxisd(target_config(2), Eigen::Vector3d::UnitZ()));
+    const geometry_msgs::PoseStamped target_pose = EigenHelpersConversions::EigenIsometry3dToGeometryPoseStamped(target_transform, "world");
     // Put together service call
     uncertainty_planning_examples::Simple6dofRobotMove::Request req;
     req.time_limit = ros::Duration(duration);
@@ -64,7 +64,7 @@ inline std::vector<Eigen::Matrix<double, 3, 1>, std::allocator<Eigen::Matrix<dou
     std::vector<Eigen::Matrix<double, 3, 1>, std::allocator<Eigen::Matrix<double, 3, 1>>> configs(poses.size());
     for (size_t idx = 0; idx < poses.size(); idx++)
     {
-        const Eigen::Affine3d& transform = EigenHelpersConversions::GeometryPoseToEigenAffine3d(poses[idx].pose);
+        const Eigen::Isometry3d& transform = EigenHelpersConversions::GeometryPoseToEigenIsometry3d(poses[idx].pose);
         const Eigen::Vector3d position = transform.translation();
         const Eigen::AngleAxisd rotation(transform.rotation());
         const Eigen::Vector3d axis = rotation.axis();
@@ -109,7 +109,7 @@ void peg_in_hole_env_se2(ros::Publisher& display_debug_publisher, ros::ServiceCl
     const std::pair<uncertainty_planning_core::SE2Config, uncertainty_planning_core::SE2Config> start_and_goal = se2_common_config::GetStartAndGoal();
     const uncertainty_planning_core::SE2SamplerPtr sampler = se2_common_config::GetSampler();
     const simple_robot_models::SE2_ROBOT_CONFIG robot_config = se2_common_config::GetDefaultRobotConfig(extra_options);
-    const uncertainty_planning_core::SE2Robot robot = se2_common_config::GetRobot(robot_config);
+    const uncertainty_planning_core::SE2Robot robot = se2_common_config::GetRobot(robot_config, 1.0, 1.0);
     const uncertainty_planning_core::SE2SimulatorPtr simulator = se2_common_config::GetSimulator(extra_options, options.debug_level);
     // Load the policy
     try
@@ -133,7 +133,7 @@ void peg_in_hole_env_se2(ros::Publisher& display_debug_publisher, ros::ServiceCl
         if (options.num_policy_executions > 0)
         {
             std::cout << "Setting actuation uncertainty..." << std::endl;
-            set_uncertainty(robot_config.max_actuator_noise, robot_config.r_max_actuator_noise, set_uncertainty_service);
+            set_uncertainty(robot_config.max_actuator_proportional_noise, robot_config.r_max_actuator_proportional_noise, set_uncertainty_service);
         }
         std::function<std::vector<Eigen::Matrix<double, 3, 1>, std::allocator<Eigen::Matrix<double, 3, 1>>>(const Eigen::Matrix<double, 3, 1>&, const Eigen::Matrix<double, 3, 1>&, const double, const double, const bool)> robot_execution_fn = [&] (const Eigen::Matrix<double, 3, 1>& target_configuration, const Eigen::Matrix<double, 3, 1>& expected_result_configuration, const double duration, const double execution_shortcut_distance, const bool reset) { return move_robot(target_configuration, expected_result_configuration, duration, execution_shortcut_distance, reset, robot_control_service); };
         const auto policy_execution_results = uncertainty_planning_core::ExecuteSE2UncertaintyPolicy(options, robot, simulator, sampler, policy, start_and_goal.first, start_and_goal.second, robot_execution_fn, display_debug_publisher);

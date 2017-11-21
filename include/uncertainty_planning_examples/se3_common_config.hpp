@@ -71,7 +71,7 @@ namespace se3_common_config
 
     inline config_common::TASK_CONFIG_PARAMS GetDefaultExtraOptions()
     {
-        return config_common::TASK_CONFIG_PARAMS(0.125, 10.0, 0.0, 0.125, "peg_in_hole");
+        return config_common::TASK_CONFIG_PARAMS(0.125, 10.0, 0.0, 0.125, 0.0, "peg_in_hole");
     }
 
     inline config_common::TASK_CONFIG_PARAMS GetExtraOptions()
@@ -86,26 +86,30 @@ namespace se3_common_config
         const double kd = 0.0; //0.01;
         const double i_clamp = 0.0;
         const double velocity_limit = 1.0; //0.25; // 1.0;
+        const double acceleration_limit = 10.0;
         const double angular_velocity_limit = velocity_limit * 0.25;
+        const double angular_acceleration_limit = acceleration_limit * 0.25;
         const double max_sensor_noise = options.sensor_error;
         const double max_angular_sensor_noise = max_sensor_noise * 0.25;
-        const double max_actuator_noise = options.actuator_error;
-        const double max_angular_actuator_noise = max_actuator_noise * 0.25;
-        const simple_robot_models::SE3_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, max_sensor_noise, max_actuator_noise, kp, ki, kd, i_clamp, angular_velocity_limit, max_angular_sensor_noise, max_angular_actuator_noise);
+        const double max_proportional_actuator_noise = options.proportional_actuator_error;
+        const double max_minimum_actuator_noise = options.minimum_actuator_error;
+        const double max_angular_proportional_actuator_noise = max_proportional_actuator_noise * 0.25;
+        const double max_angular_minimum_actuator_noise = max_minimum_actuator_noise * 0.25;
+        const simple_robot_models::SE3_ROBOT_CONFIG robot_config(kp, ki, kd, i_clamp, velocity_limit, acceleration_limit, max_sensor_noise, max_proportional_actuator_noise, max_minimum_actuator_noise, kp, ki, kd, i_clamp, angular_velocity_limit, angular_acceleration_limit, max_angular_sensor_noise, max_angular_proportional_actuator_noise, max_angular_minimum_actuator_noise);
         return robot_config;
     }
 
-    inline Eigen::Affine3d MakeConfig(const Eigen::Translation3d& translation, const Eigen::Quaterniond& rotation)
+    inline Eigen::Isometry3d MakeConfig(const Eigen::Translation3d& translation, const Eigen::Quaterniond& rotation)
     {
-        const Eigen::Affine3d config = translation * rotation;
+        const Eigen::Isometry3d config = translation * rotation;
         return config;
     }
 
-    inline std::pair<Eigen::Affine3d, Eigen::Affine3d> GetStartAndGoal()
+    inline std::pair<Eigen::Isometry3d, Eigen::Isometry3d> GetStartAndGoal()
     {
         // Define the goals of the plan
-        const Eigen::Affine3d start = MakeConfig(Eigen::Translation3d(9.0, 9.0, 9.0), Eigen::Quaterniond::Identity());
-        const Eigen::Affine3d goal = MakeConfig(Eigen::Translation3d(2.25, 2.25, 0.625), Eigen::Quaterniond::Identity());
+        const Eigen::Isometry3d start = MakeConfig(Eigen::Translation3d(9.0, 9.0, 9.0), Eigen::Quaterniond::Identity());
+        const Eigen::Isometry3d goal = MakeConfig(Eigen::Translation3d(2.25, 2.25, 0.625), Eigen::Quaterniond::Identity());
         return std::make_pair(start, goal);
     }
 
@@ -128,11 +132,11 @@ namespace se3_common_config
         return robot_points;
     }
 
-    inline simple_robot_models::SimpleSE3Robot GetRobot(const simple_robot_models::SE3_ROBOT_CONFIG& robot_config)
+    inline simple_robot_models::SimpleSE3Robot GetRobot(const simple_robot_models::SE3_ROBOT_CONFIG& robot_config, const double position_distance_weight, const double rotation_distance_weight)
     {
         // Make the actual robot
-        const Eigen::Affine3d initial_config = Eigen::Affine3d::Identity();
-        simple_robot_models::SimpleSE3Robot robot(GetRobotPoints(), initial_config, robot_config);
+        const Eigen::Isometry3d initial_config = Eigen::Isometry3d::Identity();
+        simple_robot_models::SimpleSE3Robot robot(GetRobotPoints(), initial_config, robot_config, position_distance_weight, rotation_distance_weight);
         return robot;
     }
 
